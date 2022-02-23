@@ -1,0 +1,11 @@
+server {
+    listen               443 ssl;
+    ssl_certificate      /etc/nginx/certs/server.crt;
+    ssl_certificate_key  /etc/nginx/certs/server.rsa;
+
+    location / {
+        try_files $uri $uri/ =404;
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+    }
+}
