@@ -16,4 +16,4 @@ need:
 8) cp -r /usr/lib64/python3.6/site-packages/selinux $VIRTUAL_ENV/lib64/python3.6/site-packages
 9) cp /usr/lib64/python3.6/site-packages/selinux/_selinux.so $VIRTUAL_ENV/lib/python3.6/site-packages
 
-10) We can import CA.pem in browser
+10) We can import CA.pem in browser (generated CA.pem is placed in "{{playbook_dir}}/etc/ca/ca-certificate.pem")
