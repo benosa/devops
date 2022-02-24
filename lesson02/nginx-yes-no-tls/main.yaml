@@ -1,25 +1,51 @@
 ---
+- name: Set up the CA
+  hosts: localhost
+  become: no
+  vars:
+    secret_ca_passphrase: secret_ca_passphrase
+  tasks:
+    - name: Make sure that etc/certs exists 
+      file: 
+        state: directory
+        path: "{{playbook_dir}}/etc/ca"
+
+    - name: Create private key with password protection
+      community.crypto.openssl_privatekey:
+        path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        passphrase: "{{ secret_ca_passphrase }}"
+        cipher: auto
+
+    - name: Create certificate signing request (CSR) for CA certificate
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        privatekey_passphrase: "{{ secret_ca_passphrase }}"
+        common_name: Homework CA
+        use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+        basic_constraints:
+          - 'CA:TRUE'
+        basic_constraints_critical: yes
+        key_usage:
+          - keyCertSign
+        key_usage_critical: true
+      register: ca_csr
+
+    - name: Create self-signed CA certificate from CSR
+      community.crypto.x509_certificate:
+        path: "{{playbook_dir}}/etc/ca/ca-certificate.pem"
+        csr_content: "{{ ca_csr.csr }}"
+        privatekey_path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        privatekey_passphrase: "{{ secret_ca_passphrase }}"
+        provider: selfsigned
+
 - name: Create keys and certificates
   hosts: localhost
   become: no
   vars:
     python_version: 3.6
+    cert_host: ec2-15-188-103-177.eu-west-3.compute.amazonaws.com
+    secret_ca_passphrase: secret_ca_passphrase
   tasks:
-    - name: install libselinux-python3
-      become: yes
-      shell:
-        cmd: "yum install libselinux-python3"
-
-    - name: copy needed files for using selinux in python3 from OS libraries1
-      copy:
-        src: /usr/lib64/python{{python_version}}/site-packages/selinux
-        dest: $VIRTUAL_ENV/lib64/python{{python_version}}/site-packages
-
-    - name: copy needed files for using selinux in python3 from OS libraries2
-      copy:
-        src: /usr/lib64/python{{python_version}}/site-packages/selinux/_selinux.so
-        dest: $VIRTUAL_ENV/lib64/python{{python_version}}/site-packages/
-
     - name: Make sure that etc/certs exists 
       file: 
         state: directory
@@ -29,49 +55,42 @@
       community.crypto.openssl_privatekey:
         path: "{{playbook_dir}}/etc/certs/server.rsa"
         size: 2048
+      #delegate_to: server_1
+      run_once: true
 
     - name: Generate an OpenSSL Certificate Signing Request with Subject information
-      community.crypto.openssl_csr:
-        path: "{{playbook_dir}}/server.csr"
+      community.crypto.openssl_csr_pipe:
+        #path: "{{playbook_dir}}/server.csr"
         privatekey_path: "{{playbook_dir}}/etc/certs/server.rsa"
         country_name: "RU"
         organization_name: "Homeworking nginx"
         email_address: "id@bevolved.net"
         common_name: "Homeworking"
-        subject_alt_name: 'DNS:*.ec2-15-188-103-177.eu-west-3.compute.amazonaws.com,DNS:ec2-15-188-103-177.eu-west-3.compute.amazonaws.com'
+        subject_alt_name: 'DNS:*.{{cert_host}},DNS:{{cert_host}}'
+      #delegate_to: server_1
+      run_once: true
+      register: csr
+
+    - name: Sign certificate with our CA
+      community.crypto.x509_certificate_pipe:
+        csr_content: "{{ csr.csr }}"
+        provider: ownca
+        ownca_path: "{{playbook_dir}}/etc/ca/ca-certificate.pem"
+        ownca_privatekey_path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        ownca_privatekey_passphrase: "{{ secret_ca_passphrase }}"
+        ownca_not_after: +365d  # valid for one year
+        ownca_not_before: "-1d"  # valid since yesterday
+      #delegate_to: server_2
+      run_once: true
+      register: certificate
+
+    - name: Write certificate file on server_1
+      copy:
+        dest: "{{playbook_dir}}/etc/certs/server.pem"
+        content: "{{ certificate.certificate }}"
+      #delegate_to: server_1
+      run_once: true
     
-    - name: Generate a Self Signed OpenSSL certificate
-      community.crypto.x509_certificate:
-        path: "{{playbook_dir}}/etc/certs/server.crt"
-        privatekey_path: "{{playbook_dir}}/etc/certs/server.rsa"
-        csr_path: "{{playbook_dir}}/server.csr"
-        provider: selfsigned
-    
-    # - name: Create key pair for the server
-    #   openssl_privatekey:
-    #     path: "{{playbook_dir}}/etc/certs/server.rsa"
-    #     size: 2048
-
-    # - name: Create certificate signing request
-    #   openssl_csr:
-    #     common_name: "Homeworking"
-    #     country_name: "RU"
-    #     email_address: "id@bevolved.net"
-    #     locality_name: "Yalta"
-    #     organization_name: "Homeworking nginx"
-    #     path: "{{playbook_dir}}/server.csr"
-    #     subject_alt_name: 
-    #        - "DNS:*.ec2-15-188-103-177.eu-west-3.compute.amazonaws.com"
-    #        - "DNS:ec2-15-188-103-177.eu-west-3.compute.amazonaws.com"
-    #     privatekey_path: "{{playbook_dir}}/etc/certs/server.rsa"
-
-    # - name: Create self-signed certificate
-    #   openssl_certificate:
-    #     csr_path: "{{playbook_dir}}/server.csr"
-    #     path: "{{playbook_dir}}/etc/certs/server.crt"
-    #     provider: selfsigned
-    #     privatekey_path: "{{playbook_dir}}/etc/certs/server.rsa"
-
 - name: configure webserver without tls
   hosts: nodes
   gather_facts: true
