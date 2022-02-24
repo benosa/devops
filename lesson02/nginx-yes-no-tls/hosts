@@ -1,0 +1,2 @@
+[nodes]
+node1   ansible_host=ec2-15-188-103-177.eu-west-3.compute.amazonaws.com ansible_port=22
