@@ -8,4 +8,5 @@ Remove users:   **ansible-playbook ./remove_users.yaml  --vault-password-file ke
 
 
 **key.txt** file is included key for decrypt **users.yaml** file
+
 **users.yaml** file is included encrypted data of five users
