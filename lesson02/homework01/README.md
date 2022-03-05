@@ -1,6 +1,7 @@
-Before run - we need setup host in file hosts
+##Before run - we need setup host in file hosts
 
-Commands for CREATE/REMOVE users
+##Commands for CREATE/REMOVE users
+
 ansible-playbook ./create_users.yaml  --vault-password-file key.txt
 ansible-playbook ./remove_users.yaml  --vault-password-file key.txt
 
