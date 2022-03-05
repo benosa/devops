@@ -1,3 +1,4 @@
+Before run - we need setup host in file hosts
 Run playbook
 ansible-playbook ./main.yaml
 
