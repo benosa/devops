@@ -2,4 +2,3 @@ mysql_port: 3306
 db_user: ansible_user
 db_password: ansible_pass
 db_name: ansible_db
-db_root_password: root_password

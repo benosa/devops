@@ -28,13 +28,12 @@
 
   post_tasks:
     - name: "Check for: exist, valid login, password of created users"
-      shell: echo '{{ user.password }}' | su - {{ user.login }}
+      shell: echo '{{ user.password }}' | su - {{ user.login }}  -c 'whoami'
       loop: "{{ from_file.users }}"
       loop_control:
         loop_var: user
       register: result
-      failed_when: "'login' not in result.stdout"
-      # failed_when: "'does not exist' in result.stderr"
+      failed_when: "user.login not in result.stdout_lines"
 
     - name: "Check for needed comment of created users"
       shell: cat /etc/passwd | grep {{ user.login }}

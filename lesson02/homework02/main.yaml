@@ -31,7 +31,7 @@
     - name: >
         "Create database user '{{ db_user }}' with '{{ db_password }}'
         and '{{ db_name }}'.*:ALL privelege"
-      no_log: True
+      no_log: true
       mysql_user:
         state: present
         name: "{{ db_user }}"
@@ -41,6 +41,7 @@
 
   post_tasks:
     - name: Check if DB exists, granted privileges for user on database
+      no_log: true
       mysql_db:
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
