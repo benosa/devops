@@ -23,20 +23,6 @@
         state: started
         enabled: true
 
-    # - name: "update mysql root password for all root accounts"
-    #   mysql_user:  
-    #     name: root  
-    #     password: "{{ db_root_password }}"  
-    #     login_user: root  
-    #     login_password: "{{ mysql_root_password }}"  
-    #     check_implicit_admin: yes  
-    #     priv: "*.*:ALL,GRANT"  
-    #   with_items:  
-    #   - "{{ ansible_hostname }}"  
-    #   - 127.0.0.1  
-    #   - ::1  
-    #   - localhost
-
     - name: "Create '{{ db_name }}' database"
       mysql_db:
         name: "{{ db_name }}"
@@ -54,39 +40,14 @@
           "{{ db_name }}.*:ALL"
 
   post_tasks:
-    # - name: Collect info about databases and version using ~/.my.cnf as a credential file
-      # become: yes
-    #   community.mysql.mysql_info:
-    #     login_user: "{{ db_user }}"
-    #     login_password: "{{ db_password }}"
-    #     filter:
-    #     - databases
-    #   register: output
-
-    # - name: check if DB exists
-    #   shell: mysql -e 'SHOW DATABASES;' | grep {{ db_name }}
-    #   register: dbstatus
-    #   failed_when: dbstatus.rc == 2
-
-    - name: Check if DB exists
+    - name: Check if DB exists, granted privileges for user on database
       mysql_db:
         login_user: "{{ db_user }}"
         login_password: "{{ db_password }}"
         name: "{{ db_name }}"
         state: present
-      # when: dbstatus.rc == 0 
-      # no_log: yes # You can disable this, if you want to print the stdout
-    # - name: "Check connection to database"
-    #   community.mysql.mysql_query:
-    #     login_db: "{{ db_name }}"
-    #     login_user: "{{ db_user }}"
-    #     login_password: "{{ db_password }}"
-    #     query: "create table test_table (Name varchar(255), EmpID INT NOT NULL)"
-    #   register: output
-
-    - name: "Debug database"
-      debug:
-        var: output
+      register: result
+      failed_when: "'error creating database' in (result.keys() | zip(result.values()) | map('join', '=') | join(','))"
 
   handlers:
     - name: restart mariadb
