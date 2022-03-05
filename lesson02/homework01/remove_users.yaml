@@ -1,0 +1,31 @@
+---
+- name: Remove users
+  hosts: nodes
+  # connection: local
+  gather_facts: false
+  no_log: True
+
+  tasks:
+    - name: Include users info from file
+      include_vars: 
+        file: users.yaml
+        name: from_file
+
+    - name: Delete users
+      become: true
+      user:
+        name: "{{ user.login }}"
+        state: absent
+        remove: yes
+      loop: "{{ from_file.users }}"
+      loop_control:
+        loop_var: user
+
+  post_tasks:
+    - name: "Check for: exist, valid login, password of created users"
+      shell: echo '{{ user.password }}' | su - {{ user.login }}
+      loop: "{{ from_file.users }}"
+      loop_control:
+        loop_var: user
+      register: result
+      failed_when: "'does not exist' not in result.stderr"
