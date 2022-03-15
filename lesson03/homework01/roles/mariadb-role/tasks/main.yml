@@ -1,0 +1,50 @@
+---
+# tasks file for mariadb-role
+- name: install MariaDB
+  block:
+    - name: "Install 'mariadb-server' package"
+      yum:
+        name: mariadb-server
+        update_cache: true
+        state: present
+
+    - name: "'MySQL-python' package"
+      yum:
+        name: MySQL-python
+        update_cache: true
+        state: present
+
+    - name: "Ensure 'mariadb' service is started and enabled"
+      service:
+        name: mariadb
+        state: started
+        enabled: true
+
+    - name: "Create '{{ db_name }}' database"
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+
+    - name: >
+        "Create database user '{{ db_user }}' with '{{ db_password }}'
+        and '{{ db_name }}'.*:ALL privelege"
+      no_log: true
+      mysql_user:
+        state: present
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv:
+          "{{ db_name }}.*:ALL"
+
+    - name: Check if DB exists, granted privileges for user on database
+      no_log: true
+      mysql_db:
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        name: "{{ db_name }}"
+        state: present
+      register: result
+      failed_when: "'error creating database' in (result.keys() | zip(result.values()) | map('join', '=') | join(','))"
+  become: true
+  tags:
+    - mariadb

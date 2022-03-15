@@ -1,0 +1,49 @@
+---
+- name: using local roles
+  hosts: localhost
+  vars:
+    ssl_part: ssl
+  pre_tasks:
+    - name: pre-task test
+      debug:
+        msg: "This task executes before roles' tasks"
+  roles:
+    - role: "{{ ssl_part }}-role"
+      tags: ssl
+      when: ssl_part == "ssl"
+  tasks:
+    - name: task from main playbook
+      debug: 
+        msg: "This task executes after roles' tasks"
+- name: using remote roles
+  hosts: nodes
+  vars:
+    nginx_part: nginx
+    mariadb_part: mariadb
+  roles:
+  - role: "{{ nginx_part }}-role"
+    tags: nginx
+    when: nginx_part == "nginx"
+
+  - role: "{{ mariadb_part }}-role"
+    tags: mariadb
+    when: mariadb_part == "mariadb"
+  post_tasks:
+    - name: check web site from control server
+      uri:
+        url: "http://{{ ansible_host }}:{{ nginx_port_no_tls }}"
+        return_content: true
+      connection: local
+      register: example_webpage_out
+      failed_when: example_webpage_out.status != 200
+      when: "'nginx' in ansible_run_tags"
+  
+    - name: check web site from control server tls
+      uri:
+        url: "https://{{ ansible_host }}:{{nginx_port_tls}}"
+        return_content: true
+        validate_certs: no
+      connection: local
+      register: example_webpage_out
+      failed_when: example_webpage_out.status != 200
+      when: "'nginx' in ansible_run_tags"

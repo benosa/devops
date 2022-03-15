@@ -1,0 +1,90 @@
+---
+# tasks file for testrole
+# - name: redefine test_part
+#   set_fact:
+#     test_part: test2
+- name: Set up the CA
+  block:
+    - name: Make sure that etc/certs exists 
+      file: 
+        state: directory
+        path: "{{playbook_dir}}/etc/ca"
+
+    - name: Create private key with password protection
+      community.crypto.openssl_privatekey:
+        path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        passphrase: "{{ secret_ca_passphrase }}"
+        cipher: auto
+
+    - name: Create certificate signing request (CSR) for CA certificate
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        privatekey_passphrase: "{{ secret_ca_passphrase }}"
+        common_name: Homework CA
+        use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+        basic_constraints:
+          - 'CA:TRUE'
+        basic_constraints_critical: yes
+        key_usage:
+          - keyCertSign
+        key_usage_critical: true
+      register: ca_csr
+
+    - name: Create self-signed CA certificate from CSR
+      community.crypto.x509_certificate:
+        path: "{{playbook_dir}}/etc/ca/ca-certificate.pem"
+        csr_content: "{{ ca_csr.csr }}"
+        privatekey_path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        privatekey_passphrase: "{{ secret_ca_passphrase }}"
+        provider: selfsigned
+  tags:
+    - ssl
+
+- name: Create keys and certificates
+  block:
+    - name: Make sure that etc/certs exists 
+      file: 
+        state: directory
+        path: "{{playbook_dir}}/etc/certs"
+
+    - name: Generate an OpenSSL private key with a different size (2048 bits)
+      community.crypto.openssl_privatekey:
+        path: "{{playbook_dir}}/etc/certs/server.rsa"
+        size: 2048
+      #delegate_to: server_1
+      run_once: true
+
+    - name: Generate an OpenSSL Certificate Signing Request with Subject information
+      community.crypto.openssl_csr_pipe:
+        #path: "{{playbook_dir}}/server.csr"
+        privatekey_path: "{{playbook_dir}}/etc/certs/server.rsa"
+        country_name: "RU"
+        organization_name: "Homeworking nginx"
+        email_address: "id@bevolved.net"
+        common_name: "Homeworking"
+        subject_alt_name: 'DNS:*.{{cert_host}},DNS:{{cert_host}}'
+      #delegate_to: server_1
+      run_once: true
+      register: csr
+
+    - name: Sign certificate with our CA
+      community.crypto.x509_certificate_pipe:
+        csr_content: "{{ csr.csr }}"
+        provider: ownca
+        ownca_path: "{{playbook_dir}}/etc/ca/ca-certificate.pem"
+        ownca_privatekey_path: "{{playbook_dir}}/etc/ca/ca-certificate.key"
+        ownca_privatekey_passphrase: "{{ secret_ca_passphrase }}"
+        ownca_not_after: +365d  # valid for one year
+        ownca_not_before: "-1d"  # valid since yesterday
+      #delegate_to: server_2
+      run_once: true
+      register: certificate
+
+    - name: Write certificate file on server_1
+      copy:
+        dest: "{{playbook_dir}}/etc/certs/server.pem"
+        content: "{{ certificate.certificate }}"
+      #delegate_to: server_1
+      run_once: true
+  tags:
+    - ssl
