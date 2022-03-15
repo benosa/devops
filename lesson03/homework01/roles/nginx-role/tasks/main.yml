@@ -17,8 +17,10 @@
         state: present
 
     - name: check file exists
+      become: false
+      connection: local
       stat: 
-        path: "{{ playbook_dir }}/etc/certs"
+        path: "{{ playbook_dir }}/etc/certs/server.rsa"
       register: file_data
       # ignore_errors: true
 
