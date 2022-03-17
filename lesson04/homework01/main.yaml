@@ -1,0 +1,48 @@
+---
+- name: test
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    string1: 2a5b8c6D2524
+    string2: 2a5b8c6D25764
+    string3: 2a5b8c6D2
+    string4: 2a5M8c6D2574
+  tasks:
+    - name: Test normal mac string
+      debug:
+        msg: "{{ string1 | format_mac_filter() }}"
+      failed_when: false
+
+    - name: Apply format_mac_filter for string with lenght more then needed
+      set_fact:
+        result: "{{ string2 | format_mac_filter() }}"
+      ignore_errors: true
+      register: result
+
+    - name: Test mac string with lenght more then needed
+      debug:
+        msg: "{{ result.msg }}"
+      failed_when: '"Not valid string" not in result.msg'
+
+    - name: Apply format_mac_filter for string with lenght less then needed
+      set_fact:
+        result: "{{ string3 | format_mac_filter() }}"
+      ignore_errors: true
+      register: result
+
+    - name: Test mac string with lenght less then needed
+      debug:
+        msg: "{{ result.msg }}"
+      failed_when: '"Not valid string" not in result.msg'
+
+    - name: Apply format_mac_filter for string wich have not allowed character
+      set_fact:
+        result: "{{ string4 | format_mac_filter() }}"
+      ignore_errors: true
+      register: result
+
+    - name: Test mac string wich have not allowed character
+      debug:
+        msg: "{{ result.msg }}"
+      failed_when: '"Not valid string" not in result.msg'

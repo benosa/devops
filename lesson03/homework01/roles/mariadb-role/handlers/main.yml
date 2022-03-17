@@ -4,4 +4,5 @@
   become: true
   service:
     name: mariadb
-    state: restarted`
+    state: restarted
+    
