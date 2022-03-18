@@ -1,0 +1,79 @@
+- name: test module
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Install python package requst
+      pip:
+        name: requests
+
+    - name: Install python package validators
+      pip:
+        name: validators
+
+    - name: Test get status code via bash script with valid url
+      get_status_code_sh:
+        url: https://ya.ru
+      register: bash_result
+      ignore_errors: true
+
+    - name: print result
+      debug:
+        msg: "{{ bash_result }}"
+      failed_when: bash_result.result_str != 200
+
+    - name: Test get status code via bash script with not found url
+      get_status_code_sh:
+        url: https://spirt-med-msk.online/ur.html
+      register: bash_result
+      ignore_errors: true
+
+    - name: print result
+      debug:
+        msg: "{{ bash_result }}"
+      failed_when: bash_result.result_str != 404
+
+    - name: Test get status code via bash script with not valid url
+      get_status_code_sh:
+        url: htt://spirt-med-msk.online/ur.html
+      register: bash_result
+      ignore_errors: true
+
+    - name: print result
+      debug:
+        msg: "{{ bash_result }}"
+      failed_when: bash_result.result_str != 0
+
+    - name: Test get status code via python script with valid url
+      get_status_code_py:
+        url: http://ya.ru
+      register: py_result
+      ignore_errors: true
+
+    - name: print result
+      debug:
+        msg: "{{ py_result }}"
+      failed_when: py_result.result_str != 200
+
+    - name: Test get status code via python script with not found url
+      get_status_code_py:
+        url: https://spirt-med-msk.online/ur.html
+      register: py_result
+      ignore_errors: true
+
+    - name: print result
+      debug:
+        msg: "{{ py_result }}"
+      failed_when: py_result.result_str != 502
+
+    - name: Test get status code via python script with not valid url
+      get_status_code_py:
+        url: htt://spirt-med-msk.online/ur.html
+      register: py_result
+      ignore_errors: true
+
+    - name: print result
+      debug:
+        msg: "{{ py_result }}"
+      failed_when: py_result.result_str != 0
+    
