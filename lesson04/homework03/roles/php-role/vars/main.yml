@@ -1,0 +1,3 @@
+---
+# vars file for php-role
+wordpress_install_directory: /srv/wordpress/

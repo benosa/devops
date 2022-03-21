@@ -1,0 +1,80 @@
+---
+# tasks file for wordpress-role
+- name: Set up wordpress
+  block:
+    - name: Download Wordpress
+      get_url:
+        url: http://wordpress.org/wordpress-{{ wp_version }}.tar.gz
+        dest: "{{ wordpress_install_directory }}"
+
+    - name: Unzipping wordpress
+      unarchive:
+        src: "{{ wordpress_install_directory }}/wordpress-{{ wp_version }}.tar.gz"
+        dest: "/srv"
+        remote_src: true
+
+    - name: Remove wordpress.tar.gz file
+      file:
+        path: "{{ wordpress_install_directory }}/wordpress-{{ wp_version }}.tar.gz"
+        state: absent
+
+    - name: Create mariadb database for wordpress
+      mysql_db:
+        name: "{{ wp_db_name }}"
+        state: present
+
+    - name: Create WordPress database user
+      no_log: true
+      mysql_user:
+        state: present
+        name: "{{ wp_db_user }}"
+        password: "{{ wp_db_password }}"
+        priv:
+          "{{ wp_db_name }}.*:ALL"
+
+    - name: >
+        Copy WordPress config file from templates
+        to /srv/wordpress/wp-config.php
+      template:
+        src: templates/wp-config.php
+        dest: "{{ wordpress_install_directory }}/wp-config.php"
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Delete old configuration file
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /etc/nginx/conf.d/notls.conf
+        - /etc/nginx/conf.d/ssl.conf
+
+    - name: Copy nginx configuration from template for wordpress
+      template:
+        src: templates/nginx-wordpress.conf.j2
+        dest: /etc/nginx/conf.d/nginx-wordpress.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: restart nginx
+
+    - name: >
+        /srv/wordpress directory recursive rights
+        for wordpress user and group
+      file:
+        path: "{{ wordpress_install_directory }}"
+        owner: wordpress
+        group: wordpress
+        state: directory
+        recurse: true
+        mode: '0775'
+
+    - name: Setting SELinux context
+      community.general.sefcontext:
+        target: "{{ wordpress_install_directory }}"
+        setype: httpd_sys_rw_content_t
+        state: present
+  become: true
+  tags:
+    - wordpress

@@ -1,0 +1,4 @@
+---
+# vars file for ssl-role
+secret_ca_passphrase: secret_ca_passphrase
+cert_host: ec2-15-188-103-177.eu-west-3.compute.amazonaws.com

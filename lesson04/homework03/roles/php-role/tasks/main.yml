@@ -1,0 +1,78 @@
+---
+# tasks file for php-role
+- name: Set up php-fpm
+  block:
+    - name: "Put repo files to /etc/yum.repos.d/ directory"
+      copy:
+        src: "{{ item }}"
+        dest: /etc/yum.repos.d/
+        owner: root
+        group: root
+        mode: 0644
+      with_fileglob: "files/*.repo"
+
+    - name: Creates directory
+      file:
+        path: "{{ wordpress_install_directory }}"
+        state: directory
+        mode: 0775
+
+    - name: Add linux group "wordpress"
+      group:
+        name: wordpress
+        state: present
+
+    - name: >
+        Add linux user "wordpress" with group "wordpress"
+        and /srv/wordpress as homedir
+      user:
+        name: wordpress
+        group: wordpress
+        home: "{{ wordpress_install_directory }}"
+        comment: Ansible-generated user
+        state: present
+
+    - name: Install packages from 'php_packages_list'
+      yum:
+        name:
+          - php
+          - php-curl
+          - php-dom
+          - php-exif
+          - php-fileinfo
+          - php-fpm
+          - php-gd
+          - php-hash
+          - php-imagick
+          - php-json
+          - php-mbstring
+          - php-mysql
+          - php-xml
+          - php-zip
+        state: present
+        update_cache: true
+      # notify: reload php-fpm
+
+    - name: Remove default /etc/php-fpm.d/www.conf file
+      file:
+        state: absent
+        path: "/etc/php-fpm.d/www.conf"
+
+    - name: Copy wordpress.conf from files to /etc/php-fpm.d/wordpress.conf
+      copy:
+        src: files/wordpress.conf
+        dest: /etc/php-fpm.d/
+        owner: root
+        group: root
+        mode: 0644
+      notify: reload php-fpm
+
+    - name: ensure PHP-FPM is enabled and started
+      service:
+        name: php-fpm
+        state: started
+        enabled: true
+
+  become: true
+  tags:
+    - php-fpm
