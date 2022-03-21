@@ -13,7 +13,7 @@
       when: ssl_part == "ssl"
   tasks:
     - name: task from main playbook
-      debug: 
+      debug:
         msg: "This task executes after roles' tasks"
 - name: using remote roles
   hosts: nodes
@@ -22,22 +22,22 @@
     mariadb_part: mariadb
     php_part: php
     wordpress_part: wordpress
+    test_part: test
   roles:
-  - role: "{{ nginx_part }}-role"
-    tags: nginx
-    when: nginx_part == "nginx"
+    - role: "{{ nginx_part }}-role"
+      when: nginx_part == "nginx"
 
-  - role: "{{ mariadb_part }}-role"
-    tags: mariadb
-    when: mariadb_part == "mariadb"
-  
-  - role: "{{ php_part }}-role"
-    tags: php-fpm
-    when: php_part == "php"
+    - role: "{{ mariadb_part }}-role"
+      when: mariadb_part == "mariadb"
 
-  - role: "{{ wordpress_part }}-role"
-    tags: wordpress
-    when: wordpress_part == "wordpress"
+    - role: "{{ php_part }}-role"
+      when: php_part == "php"
+
+    - role: "{{ wordpress_part }}-role"
+      when: wordpress_part == "wordpress"
+
+    - role: "{{ test_part }}-role"
+      when: test_part == "test"
 
   post_tasks:
     - name: check web site from control server
@@ -48,12 +48,12 @@
       register: example_webpage_out
       failed_when: example_webpage_out.status != 200
       when: "'nginx' in ansible_run_tags"
-  
+
     - name: check web site from control server tls
       uri:
-        url: "https://{{ ansible_host }}:{{nginx_port_tls}}"
+        url: "https://{{ ansible_host }}:{{ nginx_port_tls }}"
         return_content: true
-        validate_certs: no
+        validate_certs: false
       connection: local
       register: example_webpage_out
       failed_when: example_webpage_out.status != 200

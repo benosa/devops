@@ -36,15 +36,6 @@
         priv:
           "{{ db_name }}.*:ALL"
 
-    - name: Check if DB exists, granted privileges for user on database
-      no_log: true
-      mysql_db:
-        login_user: "{{ db_user }}"
-        login_password: "{{ db_password }}"
-        name: "{{ db_name }}"
-        state: present
-      register: result
-      failed_when: "'error creating database' in (result.keys() | zip(result.values()) | map('join', '=') | join(','))"
   become: true
   tags:
     - mariadb

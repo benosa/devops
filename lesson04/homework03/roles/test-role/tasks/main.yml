@@ -1,0 +1,61 @@
+---
+# tasks file for test-role
+- name: Tests nginx
+  block:
+    - name: check web site from control server tls
+      uri:
+        url: "https://{{ ansible_host }}:{{ nginx_port_tls }}"
+        return_content: true
+        validate_certs: false
+      connection: local
+      register: example_webpage_out
+      failed_when: example_webpage_out.status != 200
+      when: file_data.stat.exists
+
+    - name: check web site from control server
+      uri:
+        url: "http://{{ ansible_host }}:{{ nginx_port_no_tls }}"
+        return_content: true
+      connection: local
+      register: example_webpage_out
+      failed_when: example_webpage_out.status != 200
+  tags:
+    - nginx
+
+- name: Tests MariaDB
+  block:
+    - name: Check if DB exists, granted privileges for user on database
+      no_log: true
+      mysql_db:
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        name: "{{ db_name }}"
+        state: present
+      register: result
+      failed_when: "'error creating database' in (result.keys() | zip(result.values()) | map('join', '=') | join(','))"
+  tags:
+    - mariadb
+
+- name: Tests Wordpress
+  block:
+    - name: restart nginx
+      become: true
+      service:
+        name: nginx
+        state: restarted
+
+    - name: Test get status code via bash script with valid url
+      connection: local
+      get_status_code_sh:
+        url: "https://{{ ansible_host }}:{{ nginx_port_tls }}/wp-admin/install.php?step=1"
+        ignore_certs: true
+      register: sh_result
+      ignore_errors: true
+
+    - name: print result
+      debug:
+        msg: "{{ sh_result }}"
+      failed_when: sh_result.result_str != 200
+
+  tags:
+    - wordpress

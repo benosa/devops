@@ -24,7 +24,7 @@ Before starting you need:
 4) In file 'hosts' set 'ansible_host', 'ansible_port'
 5) In file 'ssl-role/vars/main.yaml' set 'python_version', 'cert_host'
 6) In file 'ssl-role/vars/main.yaml'  - set 'secret_ca_passphrase'
-7) install community crypto modules: 'ansible-galaxy collection install community.general'
+7) install community general modules: 'ansible-galaxy collection install community.general'
 
 If we see Error: 
 ----

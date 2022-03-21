@@ -107,28 +107,11 @@
         immediate: true
       when: file_data.stat.exists
 
-    - name: check web site from control server
-      uri:
-        url: "http://{{ ansible_host }}:{{ nginx_port_no_tls }}"
-        return_content: true
-      connection: local
-      register: example_webpage_out
-      failed_when: example_webpage_out.status != 200
-
     - name: restart enginx
       service:
         name: nginx
         state: restarted
 
-    - name: check web site from control server tls
-      uri:
-        url: "https://{{ ansible_host }}:{{ nginx_port_tls }}"
-        return_content: true
-        validate_certs: false
-      connection: local
-      register: example_webpage_out
-      failed_when: example_webpage_out.status != 200
-      when: file_data.stat.exists
   become: true
   tags:
     - nginx
